@@ -1,0 +1,52 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+$script = <<SCRIPT
+# Update apt and get dependencies
+sudo apt-get update
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y unzip curl vim \
+    apt-transport-https \
+    ca-certificates \
+    apt-transport-https \
+    software-properties-common
+
+#get graylog repo
+sudo wget https://packages.graylog2.org/repo/packages/graylog-2.4-repository_latest.deb
+
+#mongo
+sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 9DA31620334BD75D9DCB49F368818C72E52529D4
+sudo echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.0.list
+sudo dpkg -i graylog-2.4-repository_latest.deb
+sudo apt-get update
+sudo apt-get install -y graylog-server mongodb 
+
+SCRIPT
+
+Vagrant.configure(2) do |config|
+  config.vm.box = "bento/ubuntu-16.04" # 16.04 LTS
+  config.vm.hostname = "graylog1"
+  config.vm.provision "shell", inline: $script, privileged: false
+ 
+  
+  # Expose the nomad api and ui to the host
+  config.vm.network "forwarded_port", guest: 9000, host: 9000, auto_correct: true
+
+  # Increase memory for Parallels Desktop
+  config.vm.provider "parallels" do |p, o|
+    p.memory = "1024"
+  end
+
+  # Increase memory for Virtualbox
+  config.vm.provider "virtualbox" do |vb|
+        vb.memory = "1024"
+  end
+  config.vm.define "n1" do |n1|
+      n1.vm.hostname = "n1"
+      n1.vm.network "public_network"
+  end
+
+  config.vm.define "n2" do |n2|
+      n2.vm.hostname = "n2"
+      n2.vm.network "public_network"
+  end
+end
